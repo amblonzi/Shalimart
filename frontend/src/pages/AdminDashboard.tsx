@@ -1,12 +1,32 @@
 import { useState, useEffect } from 'react';
-import { Package, Edit3, Trash2, X, ChevronDown, Upload } from 'lucide-react';
+import { Package, Edit3, Trash2, X, ChevronDown, Upload, Users, Settings, Save, Shield, ShieldOff, Check, AlertCircle } from 'lucide-react';
 import { useStore, type Product, type Order } from '../store/useStore';
 import api from '../api/axios';
 
+interface User {
+  id: number;
+  email: string;
+  full_name: string;
+  phone_number: string;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+}
+
+interface SystemSetting {
+  id: number;
+  key: string;
+  value: string;
+  description: string;
+  updated_at: string;
+}
+
 const AdminDashboard = () => {
-  const [tab, setTab] = useState<'products' | 'orders'>('products');
+  const [tab, setTab] = useState<'products' | 'orders' | 'users' | 'settings'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -17,10 +37,14 @@ const AdminDashboard = () => {
 
   const fetchProducts = () => api.get('/products').then(res => setProducts(res.data.items));
   const fetchOrders = () => api.get('/orders/admin').then(res => setOrders(res.data));
+  const fetchUsers = () => api.get('/admin/users').then(res => setUsers(res.data));
+  const fetchSettings = () => api.get('/admin/settings').then(res => setSettings(res.data));
 
   useEffect(() => {
     fetchProducts();
     fetchOrders();
+    fetchUsers();
+    fetchSettings();
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -100,6 +124,36 @@ const AdminDashboard = () => {
     }
   };
 
+  const toggleUserAdmin = async (userId: number, currentStatus: boolean) => {
+    try {
+      await api.patch(`/admin/users/${userId}`, { is_admin: !currentStatus });
+      fetchUsers();
+      addToast('User permissions updated', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.detail || 'Update failed', 'error');
+    }
+  };
+
+  const toggleUserActive = async (userId: number, currentStatus: boolean) => {
+    try {
+      await api.patch(`/admin/users/${userId}`, { is_active: !currentStatus });
+      fetchUsers();
+      addToast(currentStatus ? 'User deactivated' : 'User activated', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.detail || 'Update failed', 'error');
+    }
+  };
+
+  const handleUpdateSetting = async (key: string, value: string) => {
+    try {
+      await api.post('/admin/settings', { key, value });
+      addToast('Setting updated', 'success');
+      fetchSettings();
+    } catch (err: any) {
+      addToast(err.response?.data?.detail || 'Failed to update setting', 'error');
+    }
+  };
+
   const openEdit = (p: Product) => {
     setEditProduct(p);
     setFormData({
@@ -125,19 +179,22 @@ const AdminDashboard = () => {
     <div className="page-enter max-w-7xl mx-auto px-4 py-10">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <h2 className="text-3xl font-bold">Admin Dashboard</h2>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setTab('products')}
-            className={`px-5 py-2 rounded-full font-medium transition-all ${tab === 'products' ? 'bg-[#1a5c38] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            Products
-          </button>
-          <button
-            onClick={() => setTab('orders')}
-            className={`px-5 py-2 rounded-full font-medium transition-all ${tab === 'orders' ? 'bg-[#1a5c38] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            Orders ({orders.length})
-          </button>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'products', label: 'Products', icon: Package },
+            { id: 'orders', label: `Orders (${orders.length})`, icon: ChevronDown },
+            { id: 'users', label: 'Users', icon: Users },
+            { id: 'settings', label: 'Settings', icon: Settings }
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id as any)}
+              className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium transition-all ${tab === t.id ? 'bg-[#1a5c38] text-white shadow-lg shadow-green-900/20' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              <t.icon className="w-4 h-4" />
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -230,7 +287,7 @@ const AdminDashboard = () => {
                     <button className="p-2 text-gray-400 hover:text-[#1a5c38] rounded-lg hover:bg-gray-50">
                       <ChevronDown className="w-4 h-4" />
                     </button>
-                    <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-36 hidden group-hover:block z-10">
+                    <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-36 hidden group-hover:block z-[20]">
                       {['pending', 'paid', 'shipped', 'delivered', 'cancelled'].map(s => (
                         <button
                           key={s}
@@ -258,7 +315,140 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* ─── ADD PRODUCT MODAL ─── */}
+      {/* ─── USERS TAB ─── */}
+      {tab === 'users' && (
+        <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="p-4 text-sm font-semibold text-gray-600">User</th>
+                  <th className="p-4 text-sm font-semibold text-gray-600">Phone</th>
+                  <th className="p-4 text-sm font-semibold text-gray-600">Joined</th>
+                  <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
+                  <th className="p-4 text-sm font-semibold text-gray-600">Admin</th>
+                  <th className="p-4 text-sm font-semibold text-gray-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <td className="p-4">
+                      <p className="font-medium text-sm">{u.full_name || 'No Name'}</p>
+                      <p className="text-xs text-gray-400">{u.email}</p>
+                    </td>
+                    <td className="p-4 text-sm text-gray-500">{u.phone_number || '-'}</td>
+                    <td className="p-4 text-xs text-gray-400">{new Date(u.created_at).toLocaleDateString()}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${u.is_active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                        {u.is_active ? 'Active' : 'Blocked'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      {u.is_admin ? <Shield className="w-4 h-4 text-[#1a5c38] mx-auto" /> : <ShieldOff className="w-4 h-4 text-gray-300 mx-auto" />}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => toggleUserAdmin(u.id, u.is_admin)} 
+                          title={u.is_admin ? "Remove Admin" : "Make Admin"}
+                          className="p-2 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-50"
+                        >
+                          <Shield className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => toggleUserActive(u.id, u.is_active)} 
+                          title={u.is_active ? "Block User" : "Activate User"}
+                          className={`p-2 rounded-lg ${u.is_active ? 'text-gray-400 hover:text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                        >
+                          {u.is_active ? <Trash2 className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ─── SETTINGS TAB ─── */}
+      {tab === 'settings' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-green-50 rounded-2xl">
+                <Settings className="w-6 h-6 text-[#1a5c38]" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">M-Pesa API Details</h3>
+                <p className="text-sm text-gray-500">Configure Lipa Na M-Pesa payments</p>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              {settings.map(s => (
+                <div key={s.key}>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{s.description || s.key}</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      defaultValue={s.value}
+                      id={`setting-${s.key}`}
+                      placeholder={`Enter ${s.key}...`}
+                      className="flex-1 p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none text-sm font-mono"
+                    />
+                    <button 
+                      onClick={() => {
+                        const val = (document.getElementById(`setting-${s.key}`) as HTMLInputElement).value;
+                        handleUpdateSetting(s.key, val);
+                      }}
+                      className="p-3 bg-[#1a5c38] text-white rounded-xl hover:bg-[#2d7a4d] transition-all"
+                    >
+                      <Save className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <div className="mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
+                <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-blue-800">Security Note</p>
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    API keys are used for processing M-Pesa STK push requests. Ensure these are kept private. Changes take effect immediately.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#1a5c38] p-8 rounded-3xl text-white shadow-xl shadow-green-900/20">
+            <h3 className="text-xl font-bold mb-4">Paybill Information</h3>
+            <p className="text-green-100 text-sm mb-8">This information is displayed to customers during checkout.</p>
+            
+            <div className="space-y-6">
+              <div className="bg-white/10 p-5 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-xs uppercase tracking-wider font-bold text-green-300 mb-1">Paybill Number</p>
+                <p className="text-2xl font-mono font-bold">{settings.find(s => s.key === 'mpesa_paybill')?.value || 'Not Set'}</p>
+              </div>
+              
+              <div className="bg-white/10 p-5 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-xs uppercase tracking-wider font-bold text-green-300 mb-1">Account Name</p>
+                <p className="text-2xl font-bold">SHALINA MART</p>
+              </div>
+            </div>
+            
+            <div className="mt-12">
+              <img src="/favicon.png" className="w-16 h-16 opacity-50 grayscale brightness-200" alt="" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODALS ─── */}
+      {/* ... (Keep existing modals for Add/Edit/CSV) ... */}
       {showAdd && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
           <div className="bg-white p-8 rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto scale-in" onClick={e => e.stopPropagation()}>
@@ -302,7 +492,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* ─── EDIT PRODUCT MODAL ─── */}
       {editProduct && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEditProduct(null)}>
           <div className="bg-white p-8 rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto scale-in" onClick={e => e.stopPropagation()}>
@@ -342,7 +531,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* ─── CSV UPLOAD MODAL ─── */}
       {showCSVUpload && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowCSVUpload(false)}>
           <div className="bg-white p-8 rounded-3xl w-full max-w-lg scale-in" onClick={e => e.stopPropagation()}>

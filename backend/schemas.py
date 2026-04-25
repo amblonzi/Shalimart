@@ -145,3 +145,24 @@ class PaginatedProducts(BaseModel):
     page: int
     per_page: int
     pages: int
+
+
+# --- Admin Management Schemas ---
+
+class UserAdminUpdate(BaseModel):
+    is_active: Optional[bool] = None
+    is_admin: Optional[bool] = None
+
+
+class SystemSettingsBase(BaseModel):
+    key: str
+    value: str
+    description: Optional[str] = None
+
+
+class SystemSettingsOut(SystemSettingsBase):
+    id: int
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

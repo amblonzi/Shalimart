@@ -109,51 +109,51 @@ const Shop = () => {
       ) : (
         <>
           {/* Product Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
             {products.map((product, i) => (
-              <div key={product.id} className={`reveal-up stagger-${(i % 4) + 1} product-card bg-white rounded-2xl p-4 shadow-sm group relative`}>
+              <div key={product.id} className={`reveal-up stagger-${(i % 4) + 1} product-card bg-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-sm group relative`}>
                 <Link to={`/product/${product.id}`} className="block">
-                  <div className="relative aspect-square mb-4 bg-gray-50 rounded-xl overflow-hidden">
+                  <div className="relative aspect-square mb-2 md:mb-4 bg-gray-50 rounded-lg md:rounded-xl overflow-hidden p-1 md:p-0">
                     <img
                       src={product.images?.split(',')[0] || '/placeholder.jpg'}
                       alt={product.name}
                       className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
                     />
                     {product.badge && (
-                      <span className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider badge-pulse">
+                      <span className="absolute top-1 left-1 md:top-3 md:left-3 bg-red-500 text-white text-[8px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded-md md:rounded uppercase tracking-wider badge-pulse">
                         {product.badge}
                       </span>
                     )}
                     {product.stock <= 0 && (
                       <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                        <span className="bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full">Out of Stock</span>
+                        <span className="bg-gray-900 text-white text-[7px] md:text-xs font-bold px-2 md:px-3 py-0.5 md:py-1 rounded-full">Out of Stock</span>
                       </div>
                     )}
                   </div>
                 </Link>
                 <button
                   onClick={() => toggleWishlist(product.id)}
-                  className={`absolute top-7 right-7 p-2 bg-white/90 backdrop-blur rounded-full shadow-md transition-colors ${wishlist.includes(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
+                  className={`absolute top-3 right-3 md:top-7 md:right-7 p-1.5 md:p-2 bg-white/90 backdrop-blur rounded-full shadow-md transition-colors ${wishlist.includes(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
                 >
-                  <Heart className={`w-4 h-4 ${wishlist.includes(product.id) ? 'fill-current' : ''}`} />
+                  <Heart className={`w-3 h-3 md:w-4 md:h-4 ${wishlist.includes(product.id) ? 'fill-current' : ''}`} />
                 </button>
-                <p className="text-xs font-bold text-[#1a5c38] mb-1">{product.category}</p>
+                <p className="text-[7px] md:text-xs font-bold text-[#1a5c38] mb-0.5 md:mb-1">{product.category}</p>
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-semibold text-gray-800 mb-2 h-12 overflow-hidden hover:text-[#1a5c38] transition-colors">{product.name}</h3>
+                  <h3 className="font-semibold text-gray-800 mb-1 md:mb-2 h-8 md:h-12 overflow-hidden hover:text-[#1a5c38] transition-colors text-[9px] md:text-base leading-tight">{product.name}</h3>
                 </Link>
-                <div className="flex justify-between items-center mt-auto">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-auto gap-1">
                   <div>
-                    <p className="text-lg font-bold text-gray-900">KSh {product.price.toLocaleString()}</p>
+                    <p className="text-sm md:text-lg font-bold text-gray-900">KSh {product.price.toLocaleString()}</p>
                     {product.original_price && (
-                      <p className="text-sm text-gray-400 line-through">KSh {product.original_price.toLocaleString()}</p>
+                      <p className="text-[8px] md:text-sm text-gray-400 line-through">KSh {product.original_price.toLocaleString()}</p>
                     )}
                   </div>
                   <button
                     onClick={() => addToCart(product)}
                     disabled={product.stock <= 0}
-                    className="bg-gray-100 p-2.5 rounded-xl text-[#1a5c38] hover:bg-[#1a5c38] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full md:w-auto bg-gray-100 p-2 md:p-2.5 rounded-lg md:rounded-xl text-[#1a5c38] hover:bg-[#1a5c38] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex justify-center items-center"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
                 </div>
               </div>

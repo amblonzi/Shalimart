@@ -40,6 +40,7 @@ const Navbar = () => {
             <div className="hidden md:flex items-center space-x-8">
               <Link to="/" className="text-gray-600 hover:text-[#1a5c38] font-medium transition-colors">Home</Link>
               <Link to="/shop" className="text-gray-600 hover:text-[#1a5c38] font-medium transition-colors">Shop</Link>
+              <Link to="/contact" className="text-gray-600 hover:text-[#1a5c38] font-medium transition-colors">Contact</Link>
               {user && (
                 <Link to="/orders" className="text-gray-600 hover:text-[#1a5c38] font-medium transition-colors">My Orders</Link>
               )}
@@ -103,6 +104,7 @@ const Navbar = () => {
           <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-3 scale-in">
             <Link to="/" onClick={() => setMobileMenuOpen(false)} className="block text-gray-600 hover:text-[#1a5c38] font-medium py-2">Home</Link>
             <Link to="/shop" onClick={() => setMobileMenuOpen(false)} className="block text-gray-600 hover:text-[#1a5c38] font-medium py-2">Shop</Link>
+            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="block text-gray-600 hover:text-[#1a5c38] font-medium py-2">Contact</Link>
             {user && <Link to="/orders" onClick={() => setMobileMenuOpen(false)} className="block text-gray-600 hover:text-[#1a5c38] font-medium py-2">My Orders</Link>}
             {user?.is_admin && <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block text-gray-600 hover:text-[#1a5c38] font-medium py-2">Admin</Link>}
           </div>

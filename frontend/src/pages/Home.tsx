@@ -144,24 +144,24 @@ const Home = () => {
             <button onClick={() => setFilter('')} className="bg-[#1a5c38] text-white px-6 py-2 rounded-full font-bold">Clear Filters</button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-8">
             {products.map((product, i) => (
-              <div key={product.id} className={`reveal-up stagger-${(i % 4) + 1} product-card bg-white rounded-3xl p-5 shadow-sm border border-gray-50 group relative`}>
+              <div key={product.id} className={`reveal-up stagger-${(i % 4) + 1} product-card bg-white rounded-xl md:rounded-3xl p-2 md:p-5 shadow-sm border border-gray-50 group relative`}>
                 <Link to={`/product/${product.id}`} className="block">
-                  <div className="relative aspect-square mb-6 bg-gray-50 rounded-2xl overflow-hidden p-4">
+                  <div className="relative aspect-square mb-2 md:mb-6 bg-gray-50 rounded-lg md:rounded-2xl overflow-hidden p-1 md:p-4">
                     <img
                       src={product.images?.split(',')[0] || '/placeholder.jpg'}
                       alt={product.name}
                       className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-700"
                     />
                     {product.badge && (
-                      <span className="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider badge-pulse">
+                      <span className="absolute top-1 left-1 md:top-4 md:left-4 bg-red-500 text-white text-[8px] md:text-[10px] font-bold px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg uppercase tracking-wider badge-pulse">
                         {product.badge}
                       </span>
                     )}
                     {product.stock <= 0 && (
-                      <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="bg-gray-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full ring-4 ring-white">SOLD OUT</span>
+                      <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center">
+                        <span className="bg-gray-900 text-white text-[7px] md:text-[10px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full ring-2 md:ring-4 ring-white">SOLD OUT</span>
                       </div>
                     )}
                   </div>
@@ -169,31 +169,31 @@ const Home = () => {
                 
                 <button
                   onClick={() => toggleWishlist(product.id)}
-                  className={`absolute top-8 right-8 p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg transition-all transform active:scale-90 ${
+                  className={`absolute top-3 right-3 md:top-8 md:right-8 p-1.5 md:p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg transition-all transform active:scale-90 ${
                     wishlist.includes(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-400'
                   }`}
                 >
-                  <Heart className={`w-4 h-4 ${wishlist.includes(product.id) ? 'fill-current' : ''}`} />
+                  <Heart className={`w-3 h-3 md:w-4 md:h-4 ${wishlist.includes(product.id) ? 'fill-current' : ''}`} />
                 </button>
 
-                <p className="text-[10px] font-black text-[#1a5c38] mb-1.5 uppercase tracking-widest">{product.category}</p>
+                <p className="text-[7px] md:text-[10px] font-black text-[#1a5c38] mb-0.5 md:mb-1.5 uppercase tracking-widest">{product.category}</p>
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-bold text-gray-800 mb-3 h-12 overflow-hidden hover:text-[#1a5c38] transition-colors leading-tight">{product.name}</h3>
+                  <h3 className="font-bold text-gray-800 mb-1 md:mb-3 h-8 md:h-12 overflow-hidden hover:text-[#1a5c38] transition-colors leading-tight text-[9px] md:text-base">{product.name}</h3>
                 </Link>
                 
-                <div className="flex justify-between items-center mt-auto pt-2">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-auto pt-1 md:pt-2 gap-1">
                   <div>
-                    <p className="text-xl font-black text-gray-900">KSh {product.price.toLocaleString()}</p>
+                    <p className="text-sm md:text-xl font-black text-gray-900">KSh {product.price.toLocaleString()}</p>
                     {product.original_price && (
-                      <p className="text-xs text-gray-400 line-through font-medium">KSh {product.original_price.toLocaleString()}</p>
+                      <p className="text-[8px] md:text-xs text-gray-400 line-through font-medium">KSh {product.original_price.toLocaleString()}</p>
                     )}
                   </div>
                   <button
                     onClick={() => addToCart(product)}
                     disabled={product.stock <= 0}
-                    className="bg-gray-50 p-3 rounded-2xl text-[#1a5c38] hover:bg-[#1a5c38] hover:text-white transition-all transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm border border-gray-100"
+                    className="w-full md:w-auto bg-gray-50 p-2 md:p-3 rounded-lg md:rounded-2xl text-[#1a5c38] hover:bg-[#1a5c38] hover:text-white transition-all transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm border border-gray-100 flex justify-center items-center"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
                 </div>
               </div>

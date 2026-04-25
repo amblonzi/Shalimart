@@ -19,6 +19,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import OrderHistory from './pages/OrderHistory';
 import AdminDashboard from './pages/AdminDashboard';
+import Contact from './pages/Contact';
 
 const App = () => {
   const { setUser, setWishlist } = useStore();
@@ -65,6 +66,7 @@ const App = () => {
                 <AdminDashboard />
               </ProtectedRoute>
             } />
+            <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>
         <Footer />

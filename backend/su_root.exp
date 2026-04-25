@@ -1,0 +1,18 @@
+spawn ssh -o StrictHostKeyChecking=no tesla@23.88.39.3
+expect "password:"
+send "ControL.4028s\r"
+expect "tesla@"
+send "su -\r"
+expect "Password:"
+send "efJbHkaCct7m\r"
+expect {
+    "root@" {
+        send "uptime; docker ps\r"
+        expect "root@"
+    }
+    "Incorrect password" {
+        send "vKUutncVuiEd\r"
+        expect "root@"
+    }
+}
+expect eof

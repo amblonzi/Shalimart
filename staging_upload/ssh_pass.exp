@@ -1,0 +1,8 @@
+spawn ssh -o StrictHostKeyChecking=no root@23.88.39.3 "uptime; docker ps -a; ls -la /var/www"
+expect {
+    "password:" {
+        send "vKUutncVuiEd\r"
+        exp_continue
+    }
+    eof
+}

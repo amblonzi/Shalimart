@@ -27,7 +27,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-shalimart}
       JWT_SECRET: ${JWT_SECRET:-your_super_secret_key_change_me}
-      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
       MPESA_CONSUMER_KEY: ${MPESA_CONSUMER_KEY}
       MPESA_CONSUMER_SECRET: ${MPESA_CONSUMER_SECRET}
       MPESA_SHORTCODE: ${MPESA_SHORTCODE}
@@ -44,7 +44,12 @@ services:
     container_name: shalimart_frontend
     restart: always
     ports:
-      - "3000:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt/live/shop.shalimart.co.ke/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/letsencrypt/live/shop.shalimart.co.ke/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      - /etc/letsencrypt/archive/shop.shalimart.co.ke:/etc/letsencrypt/archive/shop.shalimart.co.ke:ro
     depends_on:
       - backend
 
