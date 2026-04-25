@@ -162,3 +162,6 @@ uploads/
 postgres_data/
 frontend/dist/
 backend/uploads/
+*.tar.gz
+*.zip
+*.bak
