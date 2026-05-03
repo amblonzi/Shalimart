@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, Edit3, Trash2, X, ChevronDown, Upload, Users, Settings, Save, Shield, ShieldOff, Check, AlertCircle } from 'lucide-react';
+import { Package, Edit3, Trash2, X, ChevronDown, Upload, Users, Settings, Save, Shield, ShieldOff, Check, AlertCircle, BarChart3, TrendingUp, DollarSign, ShoppingBag } from 'lucide-react';
 import { useStore, type Product, type Order } from '../store/useStore';
 import api from '../api/axios';
 
@@ -21,30 +21,52 @@ interface SystemSetting {
   updated_at: string;
 }
 
+interface AnalyticsData {
+  revenue: { total: number; monthly: number };
+  orders: { total: number; breakdown: Record<string, number> };
+  top_products: { name: string; sold: number }[];
+  total_customers: number;
+}
+
 const AdminDashboard = () => {
-  const [tab, setTab] = useState<'products' | 'orders' | 'users' | 'settings'>('products');
+  const [tab, setTab] = useState<'products' | 'orders' | 'users' | 'settings' | 'analytics'>('analytics');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [settings, setSettings] = useState<SystemSetting[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({ name: '', category: '', price: '', description: '', stock: '', badge: '' });
   const [files, setFiles] = useState<FileList | null>(null);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+    const [csvFile, setCsvFile] = useState<File | null>(null);
   const { addToast } = useStore();
 
   const fetchProducts = () => api.get('/products').then(res => setProducts(res.data.items));
   const fetchOrders = () => api.get('/orders/admin').then(res => setOrders(res.data));
   const fetchUsers = () => api.get('/admin/users').then(res => setUsers(res.data));
   const fetchSettings = () => api.get('/admin/settings').then(res => setSettings(res.data));
+  const fetchAnalytics = () => api.get('/admin/analytics').then(res => setAnalytics(res.data));
+
+  const resetOrders = async () => {
+    if (!window.confirm('Are you sure you want to PERMANENTLY delete ALL orders? This cannot be undone.')) return;
+    try {
+      await api.delete('/admin/orders/reset');
+      fetchOrders();
+      fetchAnalytics();
+      addToast('All orders have been reset', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.detail || 'Reset failed', 'error');
+    }
+  };
 
   useEffect(() => {
     fetchProducts();
     fetchOrders();
     fetchUsers();
     fetchSettings();
+    fetchAnalytics();
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -69,17 +91,22 @@ const AdminDashboard = () => {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editProduct) return;
-    const updates: Record<string, any> = {};
-    if (formData.name) updates.name = formData.name;
-    if (formData.category) updates.category = formData.category;
-    if (formData.price) updates.price = parseFloat(formData.price);
-    if (formData.description) updates.description = formData.description;
-    if (formData.stock) updates.stock = parseInt(formData.stock);
-    if (formData.badge !== undefined) updates.badge = formData.badge || null;
+
+    const data = new FormData();
+    if (formData.name) data.append('name', formData.name);
+    if (formData.category) data.append('category', formData.category);
+    if (formData.price) data.append('price', formData.price);
+    if (formData.description) data.append('description', formData.description);
+    if (formData.stock) data.append('stock', formData.stock);
+    if (formData.badge !== undefined) data.append('badge', formData.badge);
+    if (files) {
+      Array.from(files).forEach(file => data.append('files', file));
+    }
 
     try {
-      await api.put(`/products/${editProduct.id}`, updates);
+      await api.put(`/products/${editProduct.id}`, data);
       setEditProduct(null);
+      setFiles(null);
       fetchProducts();
       addToast('Product updated', 'success');
     } catch (err: any) {
@@ -144,6 +171,7 @@ const AdminDashboard = () => {
     }
   };
 
+
   const handleUpdateSetting = async (key: string, value: string) => {
     try {
       await api.post('/admin/settings', { key, value });
@@ -156,6 +184,7 @@ const AdminDashboard = () => {
 
   const openEdit = (p: Product) => {
     setEditProduct(p);
+    setFiles(null);
     setFormData({
       name: p.name,
       category: p.category,
@@ -183,6 +212,7 @@ const AdminDashboard = () => {
           {[
             { id: 'products', label: 'Products', icon: Package },
             { id: 'orders', label: `Orders (${orders.length})`, icon: ChevronDown },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
             { id: 'users', label: 'Users', icon: Users },
             { id: 'settings', label: 'Settings', icon: Settings }
           ].map(t => (
@@ -197,6 +227,123 @@ const AdminDashboard = () => {
           ))}
         </div>
       </div>
+
+      {/* ─── ANALYTICS TAB ─── */}
+      {tab === 'analytics' && analytics && (
+        <div className="space-y-8 animate-in">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-green-50 rounded-2xl">
+                  <DollarSign className="w-6 h-6 text-[#1a5c38]" />
+                </div>
+                <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Revenue</p>
+              </div>
+              <p className="text-3xl font-extrabold text-gray-900">KSh {analytics.revenue.total.toLocaleString()}</p>
+              <div className="flex items-center gap-1 mt-2 text-green-600">
+                <TrendingUp className="w-3 h-3" />
+                <span className="text-[10px] font-bold">Lifetime Sales</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-blue-50 rounded-2xl">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                </div>
+                <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Monthly Sales</p>
+              </div>
+              <p className="text-3xl font-extrabold text-gray-900">KSh {analytics.revenue.monthly.toLocaleString()}</p>
+              <p className="text-[10px] font-bold text-gray-400 mt-2">Current Month</p>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-amber-50 rounded-2xl">
+                  <ShoppingBag className="w-6 h-6 text-amber-600" />
+                </div>
+                <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Orders</p>
+              </div>
+              <p className="text-3xl font-extrabold text-gray-900">{analytics.orders.total}</p>
+              <p className="text-[10px] font-bold text-gray-400 mt-2">{analytics.orders.breakdown['paid'] || 0} Successful</p>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-purple-50 rounded-2xl">
+                  <Users className="w-6 h-6 text-purple-600" />
+                </div>
+                <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Customers</p>
+              </div>
+              <p className="text-3xl font-extrabold text-gray-900">{analytics.total_customers}</p>
+              <p className="text-[10px] font-bold text-gray-400 mt-2">Registered Users</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Best Sellers */}
+            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-[#1a5c38]" />
+                Top 5 Best Sellers
+              </h3>
+              <div className="space-y-4">
+                {analytics.top_products.length > 0 ? (
+                  analytics.top_products.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 bg-[#1a5c38] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                          {i + 1}
+                        </span>
+                        <p className="font-bold text-gray-900 text-sm">{p.name}</p>
+                      </div>
+                      <p className="text-sm font-bold text-[#1a5c38]">{p.sold} sold</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-400 py-12">No sales data yet</p>
+                )}
+              </div>
+            </div>
+
+            {/* Order Status Breakdown */}
+            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-[#1a5c38]" />
+                Order Distribution
+              </h3>
+              <div className="space-y-6">
+                {Object.entries(analytics.orders.breakdown).map(([status, count]) => {
+                  const percentage = (count / analytics.orders.total) * 100;
+                  const statusColors: Record<string, string> = {
+                    pending: 'bg-amber-400',
+                    paid: 'bg-blue-500',
+                    shipped: 'bg-purple-500',
+                    delivered: 'bg-green-500',
+                    cancelled: 'bg-gray-400',
+                    failed: 'bg-red-500',
+                  };
+                  return (
+                    <div key={status}>
+                      <div className="flex justify-between text-xs font-bold mb-2">
+                        <span className="capitalize">{status}</span>
+                        <span>{count} ({percentage.toFixed(1)}%)</span>
+                      </div>
+                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${statusColors[status] || 'bg-gray-300'} transition-all duration-1000`} 
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── PRODUCTS TAB ─── */}
       {tab === 'products' && (
@@ -265,6 +412,16 @@ const AdminDashboard = () => {
       {/* ─── ORDERS TAB ─── */}
       {tab === 'orders' && (
         <div className="space-y-4">
+          {orders.length > 0 && (
+            <div className="flex justify-end mb-4">
+              <button 
+                onClick={resetOrders} 
+                className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-100 transition-all flex items-center gap-2 border border-red-100"
+              >
+                <Trash2 className="w-4 h-4" /> Reset All Orders
+              </button>
+            </div>
+          )}
           {orders.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-100">
               <Package className="w-16 h-16 mx-auto text-gray-200 mb-4" />
@@ -317,8 +474,16 @@ const AdminDashboard = () => {
 
       {/* ─── USERS TAB ─── */}
       {tab === 'users' && (
-        <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-          <div className="overflow-x-auto">
+        <>
+          <div className="flex justify-end mb-6">
+            <button 
+              className="bg-[#1a5c38] text-white px-6 py-2.5 rounded-full font-bold hover:bg-[#2d7a4d] transition-all shadow-lg shadow-green-900/20 flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" /> Add User / Shop Manager
+            </button>
+          </div>
+          <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+            <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
@@ -371,6 +536,7 @@ const AdminDashboard = () => {
             </table>
           </div>
         </div>
+      </>
       )}
 
       {/* ─── SETTINGS TAB ─── */}
@@ -392,17 +558,28 @@ const AdminDashboard = () => {
                 <div key={s.key}>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{s.description || s.key}</label>
                   <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      defaultValue={s.value}
-                      id={`setting-${s.key}`}
-                      placeholder={`Enter ${s.key}...`}
-                      className="flex-1 p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none text-sm font-mono"
-                    />
+                    {s.key === 'mpesa_env' ? (
+                      <select 
+                        defaultValue={s.value}
+                        id={`setting-${s.key}`}
+                        className="flex-1 p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none text-sm"
+                      >
+                        <option value="sandbox">Sandbox</option>
+                        <option value="production">Production</option>
+                      </select>
+                    ) : (
+                      <input 
+                        type="text" 
+                        defaultValue={s.value}
+                        id={`setting-${s.key}`}
+                        placeholder={`Enter ${s.key}...`}
+                        className="flex-1 p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none text-sm font-mono"
+                      />
+                    )}
                     <button 
                       onClick={() => {
-                        const val = (document.getElementById(`setting-${s.key}`) as HTMLInputElement).value;
-                        handleUpdateSetting(s.key, val);
+                        const el = document.getElementById(`setting-${s.key}`) as HTMLInputElement | HTMLSelectElement;
+                        handleUpdateSetting(s.key, el.value);
                       }}
                       className="p-3 bg-[#1a5c38] text-white rounded-xl hover:bg-[#2d7a4d] transition-all"
                     >
@@ -436,7 +613,7 @@ const AdminDashboard = () => {
               
               <div className="bg-white/10 p-5 rounded-2xl backdrop-blur-sm border border-white/10">
                 <p className="text-xs uppercase tracking-wider font-bold text-green-300 mb-1">Account Name</p>
-                <p className="text-2xl font-bold">SHALINA MART</p>
+                <p className="text-2xl font-bold">{settings.find(s => s.key === 'mpesa_account_name')?.value || 'SHALINA MART'}</p>
               </div>
             </div>
             
@@ -493,7 +670,7 @@ const AdminDashboard = () => {
       )}
 
       {editProduct && (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setEditProduct(null)}>
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { setEditProduct(null); setFiles(null); }}>
           <div className="bg-white p-8 rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold">Edit Product</h3>
@@ -522,8 +699,12 @@ const AdminDashboard = () => {
                 <option value="Featured">Featured</option>
               </select>
               <textarea placeholder="Description" className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none" rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Product Images</label>
+                <input type="file" multiple accept="image/*" className="w-full" onChange={e => setFiles(e.target.files)} />
+              </div>
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setEditProduct(null)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 transition-colors">Cancel</button>
+                <button type="button" onClick={() => { setEditProduct(null); setFiles(null); }} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 transition-colors">Cancel</button>
                 <button type="submit" className="flex-1 py-3 rounded-xl bg-[#1a5c38] text-white font-bold hover:bg-[#2d7a4d] transition-colors">Save Changes</button>
               </div>
             </form>

@@ -4,6 +4,8 @@ import { Heart, Plus, SlidersHorizontal } from 'lucide-react';
 import { useStore, type Product } from '../store/useStore';
 import api from '../api/axios';
 
+import SEO from '../components/SEO';
+
 const Shop = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,7 @@ const Shop = () => {
 
   return (
     <div className="page-enter max-w-7xl mx-auto px-4 py-10">
+      <SEO title="Shop | Shalina Mart" description="Browse all our products, from Farm Equipment to Household items." />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>
@@ -109,7 +112,7 @@ const Shop = () => {
       ) : (
         <>
           {/* Product Grid */}
-          <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6">
             {products.map((product, i) => (
               <div key={product.id} className={`reveal-up stagger-${(i % 4) + 1} product-card bg-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-sm group relative`}>
                 <Link to={`/product/${product.id}`} className="block">

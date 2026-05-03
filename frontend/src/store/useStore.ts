@@ -13,6 +13,16 @@ export interface Product {
   stock: number;
   badge?: string;
   product_images?: { id: number; url: string; sort_order: number }[];
+  average_rating?: number;
+  review_count?: number;
+}
+
+export interface Review {
+  id: number;
+  rating: number;
+  comment?: string;
+  created_at: string;
+  user_name?: string;
 }
 
 interface User {

@@ -2,8 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, F
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
+import datetime
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -162,7 +164,10 @@ def get_products(
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    query = db.query(models.Product).options(joinedload(models.Product.product_images))
+    query = db.query(models.Product).options(
+        joinedload(models.Product.product_images),
+        joinedload(models.Product.reviews)
+    )
     if category:
         query = query.filter(models.Product.category == category)
     if search:
@@ -171,6 +176,10 @@ def get_products(
     total = query.count()
     pages = math.ceil(total / per_page) if total > 0 else 1
     items = query.order_by(models.Product.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    
+    for p in items:
+        p.review_count = len(p.reviews) if p.reviews else 0
+        p.average_rating = sum(r.rating for r in p.reviews) / p.review_count if p.review_count > 0 else 0.0
 
     return schemas.PaginatedProducts(
         items=items,
@@ -184,10 +193,14 @@ def get_products(
 @app.get("/products/{product_id}", response_model=schemas.Product)
 def get_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(models.Product).options(
-        joinedload(models.Product.product_images)
+        joinedload(models.Product.product_images),
+        joinedload(models.Product.reviews)
     ).filter(models.Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+        
+    product.review_count = len(product.reviews) if product.reviews else 0
+    product.average_rating = sum(r.rating for r in product.reviews) / product.review_count if product.review_count > 0 else 0.0
     return product
 
 
@@ -241,9 +254,16 @@ async def create_product(
 
 
 @app.put("/products/{product_id}", response_model=schemas.Product)
-def update_product(
+async def update_product(
     product_id: int,
-    updates: schemas.ProductUpdate,
+    name: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    original_price: Optional[float] = Form(None),
+    stock: Optional[int] = Form(None),
+    badge: Optional[str] = Form(None),
+    files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
     admin: models.User = Depends(get_admin_user)
 ):
@@ -251,9 +271,42 @@ def update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    update_data = updates.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(product, key, value)
+    if name is not None:
+        product.name = name
+    if category is not None:
+        product.category = category
+    if description is not None:
+        product.description = description
+    if price is not None:
+        product.price = price
+    if original_price is not None:
+        product.original_price = original_price
+    if stock is not None:
+        product.stock = stock
+    if badge is not None:
+        product.badge = badge
+
+    if files:
+        saved_images = []
+        existing_count = db.query(models.ProductImage).filter(models.ProductImage.product_id == product.id).count()
+        for i, file in enumerate(files):
+            file_ext = file.filename.split('.')[-1].lower() if file.filename else ''
+            if file_ext not in ALLOWED_IMAGE_EXTENSIONS:
+                raise HTTPException(status_code=400, detail=f"File type '.{file_ext}' not allowed. Allowed: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}")
+
+            file_name = f"{uuid.uuid4()}.{file_ext}"
+            file_path = os.path.join(UPLOAD_DIR, file_name)
+            with open(file_path, 'wb') as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            url = f"/uploads/{file_name}"
+            saved_images.append(url)
+            img = models.ProductImage(product_id=product.id, url=url, sort_order=existing_count + i)
+            db.add(img)
+
+        if product.images:
+            product.images = ",".join([*product.images.split(','), *saved_images])
+        else:
+            product.images = ",".join(saved_images)
 
     db.commit()
     db.refresh(product)
@@ -393,6 +446,54 @@ def remove_from_wishlist(product_id: int, db: Session = Depends(get_db), user: m
     db.commit()
     return {"detail": "Removed from wishlist"}
 
+# ────────────────────────────────────────
+# REVIEWS
+# ────────────────────────────────────────
+
+@app.get("/products/{product_id}/reviews", response_model=List[schemas.ReviewOut])
+def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
+    reviews = db.query(models.Review).filter(models.Review.product_id == product_id).order_by(models.Review.created_at.desc()).all()
+    # Populate user_name manually
+    for r in reviews:
+        if r.user:
+            r.user_name = r.user.full_name or r.user.email.split('@')[0]
+    return reviews
+
+
+@app.post("/products/{product_id}/reviews", response_model=schemas.ReviewOut)
+def create_product_review(
+    product_id: int,
+    review: schemas.ReviewCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    # Check if user already reviewed
+    existing = db.query(models.Review).filter(
+        models.Review.product_id == product_id,
+        models.Review.user_id == current_user.id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already reviewed this product")
+
+    if not (1 <= review.rating <= 5):
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+
+    new_review = models.Review(
+        product_id=product_id,
+        user_id=current_user.id,
+        rating=review.rating,
+        comment=review.comment
+    )
+    db.add(new_review)
+    db.commit()
+    db.refresh(new_review)
+    new_review.user_name = current_user.full_name or current_user.email.split('@')[0]
+    return new_review
+
 
 # ────────────────────────────────────────
 # ORDER ROUTES
@@ -427,12 +528,14 @@ def create_order(
         product.stock -= qty
 
     # Create the order
+    payment_method = order_in.payment_method or "mpesa"
     db_order = models.Order(
         user_id=user.id,
         total_amount=total,
         status="pending",
         delivery_address=order_in.delivery_address,
         delivery_phone=order_in.delivery_phone or user.phone_number,
+        payment_method=payment_method,
     )
     db.add(db_order)
     db.flush()
@@ -450,27 +553,33 @@ def create_order(
     db.commit()
     db.refresh(db_order)
 
+    # Cash on Delivery — no STK push needed
+    if payment_method == "cash":
+        return {"status": "success", "order_id": db_order.id, "message": "Order placed! Pay with cash on delivery."}
+
     # Trigger M-Pesa STK Push
-    callback_url = os.getenv("MPESA_CALLBACK_URL", "https://your-domain.com/mpesa/callback")
+    callback_url = os.getenv("MPESA_CALLBACK_URL", "http://91.98.40.198/api/mpesa/callback")
     phone = order_in.delivery_phone or user.phone_number or "254700000000"
 
     try:
         response = mpesa_client.stk_push(
+            db=db,
             amount=int(total),
             phone_number=phone,
             callback_url=callback_url,
             account_ref=f"ORD-{db_order.id}"
         )
 
+        print(f"DEBUG: M-Pesa Response for Order #{db_order.id}: {response}")
         if "CheckoutRequestID" in response:
             db_order.mpesa_checkout_id = response["CheckoutRequestID"]
             db.commit()
             return {"status": "success", "order_id": db_order.id, "mpesa": response}
 
         return {"status": "pending", "order_id": db_order.id, "message": "Order created. M-Pesa push may have failed.", "details": response}
-    except Exception:
-        # Order is still created even if M-Pesa fails
-        return {"status": "pending", "order_id": db_order.id, "message": "Order created. Payment pending."}
+    except Exception as e:
+        print(f"ERROR: M-Pesa Push failed for Order #{db_order.id}: {str(e)}")
+        return {"status": "pending", "order_id": db_order.id, "message": f"Order created. Payment pending. Error: {str(e)}"}
 
 
 @app.get("/orders", response_model=List[schemas.Order])
@@ -478,6 +587,26 @@ def get_my_orders(db: Session = Depends(get_db), user: models.User = Depends(get
     return db.query(models.Order).options(
         joinedload(models.Order.items).joinedload(models.OrderItem.product)
     ).filter(models.Order.user_id == user.id).order_by(models.Order.created_at.desc()).all()
+
+
+@app.post("/orders/{order_id}/cancel")
+def cancel_own_order(order_id: int, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    order = db.query(models.Order).filter(models.Order.id == order_id, models.Order.user_id == user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.status != "pending":
+        raise HTTPException(status_code=400, detail="Only pending orders can be cancelled")
+    
+    # Restore stock
+    for item in order.items:
+        product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
+        if product:
+            product.stock += item.quantity
+    
+    order.status = "cancelled"
+    db.commit()
+    return {"detail": "Order cancelled successfully"}
 
 
 @app.get("/orders/admin", response_model=List[schemas.Order])
@@ -548,9 +677,211 @@ async def mpesa_callback(data: dict, db: Session = Depends(get_db)):
 
 
 # ────────────────────────────────────────
-# ROOT
+# ADMIN MANAGEMENT ROUTES
+# ────────────────────────────────────────
+
+@app.get("/admin/users", response_model=List[schemas.User])
+def list_users(db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    return db.query(models.User).all()
+
+
+@app.patch("/admin/users/{user_id}", response_model=schemas.User)
+def update_user_status(
+    user_id: int,
+    update: schemas.UserAdminUpdate,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_admin_user)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if update.is_active is not None:
+        user.is_active = update.is_active
+    if update.is_admin is not None:
+        user.is_admin = update.is_admin
+        
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.delete("/admin/orders/reset")
+def reset_all_orders(
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_admin_user)
+):
+    # Delete all order items first (due to FK)
+    db.query(models.OrderItem).delete()
+    # Delete all orders
+    db.query(models.Order).delete()
+    db.commit()
+    return {"detail": "All orders have been deleted"}
+
+
+@app.post("/admin/users", response_model=schemas.User)
+def create_user_admin(
+    user_in: schemas.UserAdminCreate,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_admin_user)
+):
+    # Check if email exists
+    existing = db.query(models.User).filter(models.User.email == user_in.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A user with this email already exists")
+    
+    # Create user
+    hashed_pw = auth.get_password_hash(user_in.password)
+    db_user = models.User(
+        email=user_in.email,
+        hashed_password=hashed_pw,
+        full_name=user_in.full_name,
+        phone_number=user_in.phone_number,
+        is_admin=user_in.is_admin,
+        is_active=True
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+@app.get("/admin/analytics")
+def get_admin_analytics(
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_admin_user)
+):
+    # 1. Revenue
+    total_revenue = db.query(func.sum(models.Order.total_amount))\
+        .filter(models.Order.status.in_(["paid", "delivered"]))\
+        .scalar() or 0.0
+    
+    # Monthly revenue
+    start_of_month = datetime.datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_revenue = db.query(func.sum(models.Order.total_amount))\
+        .filter(models.Order.status.in_(["paid", "delivered"]))\
+        .filter(models.Order.created_at >= start_of_month)\
+        .scalar() or 0.0
+    
+    # 2. Order Breakdown
+    status_counts = db.query(models.Order.status, func.count(models.Order.id))\
+        .group_by(models.Order.status)\
+        .all()
+    status_breakdown = {status: count for status, count in status_counts}
+    
+    # 3. Top Products
+    top_products_query = db.query(
+        models.Product.name,
+        func.sum(models.OrderItem.quantity).label("total_sold")
+    ).join(models.OrderItem)\
+     .join(models.Order)\
+     .filter(models.Order.status.in_(["paid", "delivered"]))\
+     .group_by(models.Product.id)\
+     .order_by(func.sum(models.OrderItem.quantity).desc())\
+     .limit(5)\
+     .all()
+    
+    top_products = [{"name": name, "sold": int(sold)} for name, sold in top_products_query]
+    
+    # 4. General Stats
+    total_customers = db.query(func.count(models.User.id)).scalar()
+    total_orders = db.query(func.count(models.Order.id)).scalar()
+    
+    return {
+        "revenue": {
+            "total": total_revenue,
+            "monthly": monthly_revenue
+        },
+        "orders": {
+            "total": total_orders,
+            "breakdown": status_breakdown
+        },
+        "top_products": top_products,
+        "total_customers": total_customers
+    }
+
+
+@app.get("/admin/settings", response_model=List[schemas.SystemSettingsOut])
+def get_all_settings(db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    return db.query(models.SystemSettings).all()
+
+
+@app.post("/admin/settings", response_model=schemas.SystemSettingsOut)
+def update_setting(
+    setting: schemas.SystemSettingsBase,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_admin_user)
+):
+    db_setting = db.query(models.SystemSettings).filter(models.SystemSettings.key == setting.key).first()
+    if db_setting:
+        db_setting.value = setting.value
+        if setting.description:
+            db_setting.description = setting.description
+    else:
+        db_setting = models.SystemSettings(
+            key=setting.key,
+            value=setting.value,
+            description=setting.description
+        )
+        db.add(db_setting)
+    
+    db.commit()
+    db.refresh(db_setting)
+    return db_setting
+
+
+# ────────────────────────────────────────
+# ROOT & SEO
 # ────────────────────────────────────────
 
 @app.get("/", tags=["Root"])
 def root():
     return {"message": "Welcome to Shalina Mart API v2.0"}
+
+
+@app.get("/robots.txt", response_class=JSONResponse)
+def get_robots_txt():
+    # Return as plain text
+    content = """User-agent: *
+Allow: /
+
+Sitemap: https://shalimart.co.ke/sitemap.xml
+"""
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(content)
+
+
+@app.get("/sitemap.xml")
+def get_sitemap(db: Session = Depends(get_db)):
+    from fastapi.responses import Response
+    
+    # Base URL of the frontend
+    base_url = "https://shalimart.co.ke"
+    
+    # Fetch all active products
+    products = db.query(models.Product).all()
+    
+    # Build XML
+    xml = ['<?xml version="1.0" encoding="UTF-8"?>']
+    xml.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    
+    # Core pages
+    static_pages = ["/", "/shop", "/contact", "/login", "/register"]
+    for page in static_pages:
+        xml.append('  <url>')
+        xml.append(f'    <loc>{base_url}{page}</loc>')
+        xml.append('    <changefreq>daily</changefreq>')
+        xml.append('    <priority>0.8</priority>')
+        xml.append('  </url>')
+        
+    # Product pages
+    for product in products:
+        xml.append('  <url>')
+        xml.append(f'    <loc>{base_url}/product/{product.id}</loc>')
+        xml.append('    <changefreq>weekly</changefreq>')
+        xml.append('    <priority>0.9</priority>')
+        xml.append('  </url>')
+        
+    xml.append('</urlset>')
+    
+    return Response(content="\n".join(xml), media_type="application/xml")

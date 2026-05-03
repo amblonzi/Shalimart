@@ -1,6 +1,6 @@
 import { MessageCircle } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '254700000000'; // Replace with actual WhatsApp business number
+const WHATSAPP_NUMBER = '254708898477'; // Actual WhatsApp business number
 const DEFAULT_MESSAGE = 'Hi! I\'m interested in shopping at Shalina Mart.';
 
 const WhatsAppButton = () => {

@@ -1,0 +1,3 @@
+Shalimart admin Details
+Email: admin@shalimart.co.ke
+Password: admin123456

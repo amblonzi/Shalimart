@@ -1,4 +1,4 @@
-import { ShoppingBag, Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Footer = () => {
@@ -8,9 +8,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link to="/" className="text-2xl font-bold text-white flex items-center gap-2 mb-4">
-              <ShoppingBag className="w-7 h-7 text-[#e8a020]" />
-              <span>Shalina Mart</span>
+            <Link to="/" className="inline-block mb-8">
+              <img src="/logo_full.png" alt="Shalina Mart" className="h-24 w-auto object-contain brightness-0 invert" />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed">
               Your one-stop shop for quality products delivered across Kenya. From farm equipment to household essentials.
@@ -75,7 +74,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} Shalina Mart. All rights reserved.</p>
-          <p className="text-gray-500 text-sm">Made with ❤️ in Kenya</p>
+          <p className="text-gray-500 text-sm">Developed and Maintained by <a href="https://inphora.net" target="_blank" rel="noopener noreferrer" className="text-[#e8a020] hover:text-white transition-colors font-medium">Inphora.net</a></p>
         </div>
       </div>
     </footer>

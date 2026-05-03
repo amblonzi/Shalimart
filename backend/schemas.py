@@ -15,6 +15,10 @@ class UserCreate(UserBase):
     password: str
 
 
+class UserAdminCreate(UserCreate):
+    is_admin: bool = False
+
+
 class User(UserBase):
     id: int
     is_active: bool
@@ -48,6 +52,27 @@ class ProductImageOut(BaseModel):
         from_attributes = True
 
 
+# --- Review Schemas ---
+
+class ReviewBase(BaseModel):
+    rating: int
+    comment: Optional[str] = None
+
+class ReviewCreate(ReviewBase):
+    pass
+
+class ReviewOut(ReviewBase):
+    id: int
+    user_id: int
+    product_id: int
+    created_at: datetime
+    
+    # Optional fields for frontend display
+    user_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 # --- Product Schemas ---
 
 class ProductBase(BaseModel):
@@ -72,6 +97,20 @@ class ProductUpdate(BaseModel):
     original_price: Optional[float] = None
     stock: Optional[int] = None
     badge: Optional[str] = None
+
+
+class ProductOut(ProductBase):
+    id: int
+    images: Optional[str] = None
+    created_at: datetime
+    product_images: List[ProductImageOut] = []
+    
+    # Review stats
+    average_rating: float = 0.0
+    review_count: int = 0
+
+    class Config:
+        from_attributes = True
 
 
 class Product(ProductBase):
@@ -118,6 +157,7 @@ class OrderCreate(BaseModel):
     items: List[OrderItemBase]
     delivery_address: Optional[str] = None
     delivery_phone: Optional[str] = None
+    payment_method: Optional[str] = "mpesa"  # mpesa, cash
 
 
 class OrderStatusUpdate(BaseModel):
@@ -130,6 +170,7 @@ class Order(BaseModel):
     status: str
     delivery_address: Optional[str] = None
     delivery_phone: Optional[str] = None
+    payment_method: Optional[str] = "mpesa"
     created_at: datetime
     items: List[OrderItemOut] = []
 

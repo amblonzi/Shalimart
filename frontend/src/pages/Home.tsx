@@ -4,6 +4,8 @@ import { ShoppingBag, Truck, Shield, Star, Heart, Plus, SlidersHorizontal } from
 import { useStore, type Product } from '../store/useStore';
 import api from '../api/axios';
 
+import SEO from '../components/SEO';
+
 const Home = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,7 @@ const Home = () => {
 
   return (
     <div className="fade-in">
+      <SEO />
       {/* Hero */}
       <section className="relative h-[650px] flex items-center overflow-hidden bg-gray-900">
         <div className="absolute inset-0 opacity-40 bg-[url('/hero-bg.png')] bg-cover bg-center"></div>
@@ -144,7 +147,7 @@ const Home = () => {
             <button onClick={() => setFilter('')} className="bg-[#1a5c38] text-white px-6 py-2 rounded-full font-bold">Clear Filters</button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-8">
             {products.map((product, i) => (
               <div key={product.id} className={`reveal-up stagger-${(i % 4) + 1} product-card bg-white rounded-xl md:rounded-3xl p-2 md:p-5 shadow-sm border border-gray-50 group relative`}>
                 <Link to={`/product/${product.id}`} className="block">

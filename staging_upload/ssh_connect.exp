@@ -1,8 +1,0 @@
-spawn ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_ed25519_hetzner K0404175026@23.88.39.3 "uptime; docker ps; ls -la"
-expect {
-    "Enter passphrase for key" {
-        send "ControL.4028s\r"
-        exp_continue
-    }
-    eof
-}

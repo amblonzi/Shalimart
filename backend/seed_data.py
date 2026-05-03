@@ -49,9 +49,28 @@ def seed():
             ("files", ("placeholder.jpg", b"placeholder_image_data", "image/jpeg"))
         ], headers=headers)
         if res.status_code == 200:
-            print(f"  ✓ Added: {p['name']}")
+            print(f"  [OK] Added: {p['name']}")
         else:
-            print(f"  ✗ Failed: {p['name']} — {res.text}")
+            print(f"  [FAIL] Failed: {p['name']} - {res.text}")
+
+
+    # 5. Seed M-Pesa Settings
+    print("Seeding M-Pesa settings...")
+    mpesa_settings = [
+        {"key": "mpesa_consumer_key", "value": os.getenv("MPESA_CONSUMER_KEY", ""), "description": "M-Pesa Consumer Key"},
+        {"key": "mpesa_consumer_secret", "value": os.getenv("MPESA_CONSUMER_SECRET", ""), "description": "M-Pesa Consumer Secret"},
+        {"key": "mpesa_shortcode", "value": os.getenv("MPESA_SHORTCODE", "174379"), "description": "M-Pesa Shortcode (Paybill/Store)"},
+        {"key": "mpesa_passkey", "value": os.getenv("MPESA_PASSKEY", ""), "description": "M-Pesa Passkey"},
+        {"key": "mpesa_env", "value": os.getenv("MPESA_ENV", "sandbox"), "description": "M-Pesa Environment (sandbox/production)"},
+        {"key": "mpesa_paybill", "value": os.getenv("MPESA_SHORTCODE", "174379"), "description": "Public Paybill Number"},
+    ]
+
+    for s in mpesa_settings:
+        res = requests.post(f"{API_URL}/admin/settings", json=s, headers=headers)
+        if res.status_code == 200:
+            print(f"  [OK] Setting: {s['key']} initialized")
+        else:
+            print(f"  [FAIL] Failed: {s['key']} - {res.text}")
 
 
 if __name__ == "__main__":

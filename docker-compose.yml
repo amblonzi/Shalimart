@@ -21,23 +21,24 @@ services:
     build: ./backend
     container_name: shalimart_backend
     restart: always
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8002:8000"
+      - "8000:8000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-shalimart}
-      JWT_SECRET: ${JWT_SECRET:-your_super_secret_key_change_me}
+      JWT_SECRET: ${JWT_SECRET:-changeme}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
       MPESA_CONSUMER_KEY: ${MPESA_CONSUMER_KEY}
       MPESA_CONSUMER_SECRET: ${MPESA_CONSUMER_SECRET}
       MPESA_SHORTCODE: ${MPESA_SHORTCODE}
       MPESA_PASSKEY: ${MPESA_PASSKEY}
+      MPESA_ENV: ${MPESA_ENV:-sandbox}
+      MPESA_CALLBACK_URL: ${MPESA_CALLBACK_URL:-http://91.98.40.198/api/mpesa/callback}
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - ./uploads:/app/uploads
+      - uploads_data:/app/uploads
 
   frontend:
     build: ./frontend
@@ -47,11 +48,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /etc/letsencrypt/live/shop.shalimart.co.ke/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-      - /etc/letsencrypt/live/shop.shalimart.co.ke/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
-      - /etc/letsencrypt/archive/shop.shalimart.co.ke:/etc/letsencrypt/archive/shop.shalimart.co.ke:ro
+      - /etc/letsencrypt/live/shalimart.co.ke/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/letsencrypt/live/shalimart.co.ke/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
     depends_on:
       - backend
 
 volumes:
   postgres_data:
+  uploads_data:

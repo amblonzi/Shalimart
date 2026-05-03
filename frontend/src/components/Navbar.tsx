@@ -31,10 +31,12 @@ const Navbar = () => {
     <>
       <nav className="sticky top-0 z-50 glass border-b border-gray-100/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="text-2xl font-bold text-[#1a5c38] flex items-center gap-2 hover:scale-105 transition-transform">
-              <ShoppingBag className="w-8 h-8" />
-              <span>Shalina Mart</span>
+          <div className="flex justify-between h-24 items-center">
+            <Link to="/" className="flex items-center hover:scale-105 transition-transform">
+              {/* Desktop Logo */}
+              <img src="/logo_full.png" alt="Shalina Mart" className="hidden md:block h-20 w-auto object-contain" />
+              {/* Mobile Logo */}
+              <img src="/logo_initials.png" alt="SM" className="md:hidden h-14 w-auto object-contain" />
             </Link>
 
             <div className="hidden md:flex items-center space-x-8">

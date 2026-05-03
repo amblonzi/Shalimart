@@ -17,6 +17,7 @@ class User(Base):
 
     wishlist = relationship("WishlistItem", back_populates="user", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="user")
+    reviews = relationship("Review", back_populates="user", cascade="all, delete-orphan")
 
 
 class Product(Base):
@@ -34,6 +35,20 @@ class Product(Base):
 
     product_images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     wishlist_items = relationship("WishlistItem", back_populates="product", cascade="all, delete-orphan")
+    reviews = relationship("Review", back_populates="product", cascade="all, delete-orphan")
+
+
+class Review(Base):
+    __tablename__ = "reviews"
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    rating = Column(Integer, nullable=False) # 1 to 5
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    product = relationship("Product", back_populates="reviews")
+    user = relationship("User", back_populates="reviews")
 
 
 class ProductImage(Base):
@@ -66,6 +81,7 @@ class Order(Base):
     mpesa_checkout_id = Column(String, nullable=True)
     delivery_address = Column(Text, nullable=True)
     delivery_phone = Column(String, nullable=True)
+    payment_method = Column(String, default="mpesa")  # mpesa, cash
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="orders")
@@ -78,7 +94,7 @@ class OrderItem(Base):
     order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
-    price = Column(Float, nullable=False)
+    price_at_purchase = Column(Float, nullable=False)
 
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
