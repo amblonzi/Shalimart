@@ -36,11 +36,13 @@ const AdminDashboard = () => {
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
   const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({ name: '', category: '', price: '', description: '', stock: '', badge: '' });
+  const [userFormData, setUserFormData] = useState({ email: '', password: '', full_name: '', phone_number: '', is_admin: false });
   const [files, setFiles] = useState<FileList | null>(null);
-    const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
   const { addToast } = useStore();
 
   const fetchProducts = () => api.get('/products').then(res => setProducts(res.data.items));
@@ -138,6 +140,19 @@ const AdminDashboard = () => {
       addToast('CSV imported successfully', 'success');
     } catch (err: any) {
       addToast(err.response?.data?.detail || 'CSV upload failed', 'error');
+    }
+  };
+  
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/admin/users', userFormData);
+      setShowAddUser(false);
+      setUserFormData({ email: '', password: '', full_name: '', phone_number: '', is_admin: false });
+      fetchUsers();
+      addToast('User created successfully', 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.detail || 'Failed to create user', 'error');
     }
   };
 
@@ -477,6 +492,7 @@ const AdminDashboard = () => {
         <>
           <div className="flex justify-end mb-6">
             <button 
+              onClick={() => setShowAddUser(true)}
               className="bg-[#1a5c38] text-white px-6 py-2.5 rounded-full font-bold hover:bg-[#2d7a4d] transition-all shadow-lg shadow-green-900/20 flex items-center gap-2"
             >
               <Users className="w-4 h-4" /> Add User / Shop Manager
@@ -744,6 +760,63 @@ const AdminDashboard = () => {
               <div className="flex gap-4">
                 <button type="button" onClick={() => setShowCSVUpload(false)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 transition-colors">Cancel</button>
                 <button type="submit" disabled={!csvFile} className="flex-1 py-3 rounded-xl bg-[#1a5c38] text-white font-bold hover:bg-[#2d7a4d] transition-colors disabled:opacity-50">Upload & Process</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddUser && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAddUser(false)}>
+          <div className="bg-white p-8 rounded-3xl w-full max-w-md scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold">Add User</h3>
+              <button onClick={() => setShowAddUser(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <input 
+                type="text" 
+                placeholder="Full Name" 
+                className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none" 
+                value={userFormData.full_name} 
+                onChange={e => setUserFormData({...userFormData, full_name: e.target.value})} 
+                required 
+              />
+              <input 
+                type="email" 
+                placeholder="Email Address" 
+                className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none" 
+                value={userFormData.email} 
+                onChange={e => setUserFormData({...userFormData, email: e.target.value})} 
+                required 
+              />
+              <input 
+                type="tel" 
+                placeholder="Phone Number (e.g. 254...)" 
+                className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none" 
+                value={userFormData.phone_number} 
+                onChange={e => setUserFormData({...userFormData, phone_number: e.target.value})} 
+              />
+              <input 
+                type="password" 
+                placeholder="Password" 
+                className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#1a5c38] outline-none" 
+                value={userFormData.password} 
+                onChange={e => setUserFormData({...userFormData, password: e.target.value})} 
+                required 
+              />
+              <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-gray-300 text-[#1a5c38] focus:ring-[#1a5c38]" 
+                  checked={userFormData.is_admin} 
+                  onChange={e => setUserFormData({...userFormData, is_admin: e.target.checked})} 
+                />
+                <span className="text-sm font-bold text-gray-700">Grant Admin Permissions</span>
+              </label>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowAddUser(false)} className="flex-1 py-3 rounded-xl bg-gray-100 font-bold hover:bg-gray-200 transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 py-3 rounded-xl bg-[#1a5c38] text-white font-bold hover:bg-[#2d7a4d] transition-colors">Create User</button>
               </div>
             </form>
           </div>
