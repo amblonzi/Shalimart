@@ -46,18 +46,25 @@ const Shop = () => {
     }).catch(() => {});
   }, []);
 
+  const currentMinPrice = searchParams.get('min_price') || '';
+  const currentMaxPrice = searchParams.get('max_price') || '';
+  const currentSort = searchParams.get('sort') || '';
+
   useEffect(() => {
     setLoading(true);
     const params: Record<string, string> = { page: currentPage.toString(), per_page: '20' };
     if (currentCategory) params.category = currentCategory;
     if (currentSearch) params.search = currentSearch;
+    if (currentMinPrice) params.min_price = currentMinPrice;
+    if (currentMaxPrice) params.max_price = currentMaxPrice;
+    if (currentSort) params.sort = currentSort;
 
     api.get('/products', { params }).then(res => {
       setProducts(res.data.items);
       setTotalPages(res.data.pages);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [currentCategory, currentSearch, currentPage]);
+  }, [currentCategory, currentSearch, currentPage, currentMinPrice, currentMaxPrice, currentSort]);
 
   const setFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -105,6 +112,57 @@ const Shop = () => {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Advanced Filters Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-8 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Price Range:</span>
+          <input 
+            type="number" 
+            placeholder="Min" 
+            className="w-20 p-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#1a5c38]"
+            value={currentMinPrice}
+            onChange={e => setFilter('min_price', e.target.value)}
+          />
+          <span className="text-gray-300">-</span>
+          <input 
+            type="number" 
+            placeholder="Max" 
+            className="w-20 p-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#1a5c38]"
+            value={currentMaxPrice}
+            onChange={e => setFilter('max_price', e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sort By:</span>
+          <select 
+            className="p-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#1a5c38] font-medium"
+            value={currentSort}
+            onChange={e => setFilter('sort', e.target.value)}
+          >
+            <option value="">Newest First</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="name_asc">Name: A-Z</option>
+          </select>
+        </div>
+
+        {(currentMinPrice || currentMaxPrice || currentSort) && (
+          <button 
+            onClick={() => {
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('min_price');
+              newParams.delete('max_price');
+              newParams.delete('sort');
+              setSearchParams(newParams);
+            }}
+            className="text-xs font-bold text-red-500 hover:underline ml-2"
+          >
+            Clear Filters
+          </button>
+        )}
       </div>
 
       {/* Search active banner */}

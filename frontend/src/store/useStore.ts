@@ -51,6 +51,13 @@ export interface Order {
   status: string;
   delivery_address?: string;
   delivery_phone?: string;
+  payment_method?: string;
+  notes?: string;
+  user?: {
+    full_name: string;
+    email: string;
+    phone_number?: string;
+  };
   created_at: string;
   items: OrderItem[];
 }

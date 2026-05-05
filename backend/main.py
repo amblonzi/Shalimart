@@ -160,6 +160,9 @@ async def get_profile(current_user: models.User = Depends(get_current_user)):
 def get_products(
     category: Optional[str] = None,
     search: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    sort: Optional[str] = None, # price_asc, price_desc, name_asc, newest
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
@@ -172,10 +175,24 @@ def get_products(
         query = query.filter(models.Product.category == category)
     if search:
         query = query.filter(models.Product.name.ilike(f"%{search}%"))
+    if min_price is not None:
+        query = query.filter(models.Product.price >= min_price)
+    if max_price is not None:
+        query = query.filter(models.Product.price <= max_price)
+
+    # Sorting
+    if sort == "price_asc":
+        query = query.order_by(models.Product.price.asc())
+    elif sort == "price_desc":
+        query = query.order_by(models.Product.price.desc())
+    elif sort == "name_asc":
+        query = query.order_by(models.Product.name.asc())
+    else:
+        query = query.order_by(models.Product.created_at.desc())
 
     total = query.count()
     pages = math.ceil(total / per_page) if total > 0 else 1
-    items = query.order_by(models.Product.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
     
     for p in items:
         p.review_count = len(p.reviews) if p.reviews else 0
@@ -644,6 +661,9 @@ def update_order_status(
             product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
             if product:
                 product.stock += item.quantity
+
+    if update.notes is not None:
+        order.notes = update.notes
 
     order.status = update.status
     db.commit()

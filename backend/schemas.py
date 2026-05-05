@@ -157,11 +157,12 @@ class OrderCreate(BaseModel):
     items: List[OrderItemBase]
     delivery_address: Optional[str] = None
     delivery_phone: Optional[str] = None
-    payment_method: Optional[str] = "mpesa"  # mpesa, cash
-
+    payment_method: Optional[str] = "mpesa"  # mpesa, cash, whatsapp, pay
+    notes: Optional[str] = None
 
 class OrderStatusUpdate(BaseModel):
-    status: str  # pending, paid, shipped, delivered, cancelled
+    status: str  # pending, paid, shipped, delivered, cancelled, failed
+    notes: Optional[str] = None
 
 
 class Order(BaseModel):
@@ -171,6 +172,7 @@ class Order(BaseModel):
     delivery_address: Optional[str] = None
     delivery_phone: Optional[str] = None
     payment_method: Optional[str] = "mpesa"
+    notes: Optional[str] = None
     created_at: datetime
     items: List[OrderItemOut] = []
 

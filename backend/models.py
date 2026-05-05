@@ -82,6 +82,7 @@ class Order(Base):
     delivery_address = Column(Text, nullable=True)
     delivery_phone = Column(String, nullable=True)
     payment_method = Column(String, default="mpesa")  # mpesa, cash
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="orders")
