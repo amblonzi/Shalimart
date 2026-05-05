@@ -79,7 +79,7 @@ const Home = () => {
               <span className="gradient-text">Kenya's Finest</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-300 mb-10 leading-relaxed opacity-0 animate-[fadeIn_0.5s_ease-out_forwards_0.4s]">
-              Everything you need, delivered straight to your doorstep across Nairobi. Quality farm equipment, household items, and more.
+              Everything you need, delivered straight to your doorstep across Nairobi. Quality household items, farm equipment, and more.
             </p>
             <div className="flex flex-wrap gap-4 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards_0.6s]">
               <Link to="/shop" className="bg-[#e8a020] text-white px-8 py-4 rounded-full text-lg font-bold hover:bg-[#f4b444] transition-all transform hover:scale-105 inline-block shadow-lg shadow-amber-500/25">

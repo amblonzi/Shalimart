@@ -7,8 +7,8 @@ interface SEOProps {
 }
 
 export default function SEO({
-  title = 'Shalina Mart | Kenya\'s Best E-Commerce for Farm & Home',
-  description = 'Your one-stop shop for quality products delivered across Kenya. From farm equipment to household essentials.',
+  title = 'Shalina Mart | Kenya\'s Best E-Commerce for Home & Farm',
+  description = 'Your one-stop shop for quality products delivered across Kenya. From household essentials to premium farm equipment.',
   image = 'https://shalimart.co.ke/logo.png',
   url = 'https://shalimart.co.ke/',
   jsonLd,
