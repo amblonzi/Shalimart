@@ -22,7 +22,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Contact from './pages/Contact';
 
 const App = () => {
-  const { setUser, setWishlist } = useStore();
+  const { setUser, setWishlist, setAuthLoading } = useStore();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -39,7 +39,12 @@ const App = () => {
         })
         .catch(() => {
           localStorage.removeItem('token');
+        })
+        .finally(() => {
+          setAuthLoading(false);
         });
+    } else {
+      setAuthLoading(false);
     }
   }, []);
 

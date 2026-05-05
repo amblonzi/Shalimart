@@ -65,6 +65,8 @@ interface StoreState {
   // Auth
   user: User | null;
   setUser: (user: User | null) => void;
+  authLoading: boolean;
+  setAuthLoading: (loading: boolean) => void;
 
   // Cart (persisted to localStorage)
   cart: CartItem[];
@@ -90,6 +92,8 @@ export const useStore = create<StoreState>()(
       // Auth
       user: null,
       setUser: (user) => set({ user }),
+      authLoading: true,
+      setAuthLoading: (authLoading) => set({ authLoading }),
 
       // Cart
       cart: [],
