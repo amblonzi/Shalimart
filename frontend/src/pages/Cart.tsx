@@ -8,7 +8,7 @@ const Cart = () => {
   const { cart, updateCartQty, removeFromCart, clearCart, user, addToast } = useStore();
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryPhone, setDeliveryPhone] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash'>('mpesa');
+  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash' | 'whatsapp' | 'pay'>('mpesa');
   const [checkingOut, setCheckingOut] = useState(false);
   const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const freeDelivery = total >= 10000;
@@ -56,6 +56,12 @@ const Cart = () => {
       if (res.data.status === 'success') {
         if (paymentMethod === 'cash') {
           addToast('Order placed! Pay with cash on delivery.', 'success');
+        } else if (paymentMethod === 'whatsapp') {
+          const message = `Hi Shalimart! I'd like to confirm my order #${res.data.order_id}.\nTotal: KSh ${total.toLocaleString()}\nAddress: ${deliveryAddress}`;
+          window.open(`https://wa.me/254708898477?text=${encodeURIComponent(message)}`, '_blank');
+          addToast('Opening WhatsApp to confirm your order...', 'info');
+        } else if (paymentMethod === 'pay') {
+          addToast('Order created! Please proceed to pay.', 'success');
         } else {
           addToast('STK Push sent! Check your phone.', 'success');
         }
@@ -197,6 +203,30 @@ const Cart = () => {
                   <p className={`text-sm font-bold ${paymentMethod === 'cash' ? 'text-[#e8a020]' : 'text-gray-500'}`}>Cash</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">Pay on delivery</p>
                 </button>
+                <button
+                  onClick={() => setPaymentMethod('whatsapp')}
+                  className={`p-4 rounded-xl border-2 text-center transition-all ${
+                    paymentMethod === 'whatsapp'
+                      ? 'border-[#25D366] bg-green-50 shadow-sm'
+                      : 'border-gray-100 bg-white hover:border-gray-200'
+                  }`}
+                >
+                  <ShoppingBag className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'whatsapp' ? 'text-[#25D366]' : 'text-gray-400'}`} />
+                  <p className={`text-sm font-bold ${paymentMethod === 'whatsapp' ? 'text-[#25D366]' : 'text-gray-500'}`}>WhatsApp</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Order via chat</p>
+                </button>
+                <button
+                  onClick={() => setPaymentMethod('pay')}
+                  className={`p-4 rounded-xl border-2 text-center transition-all ${
+                    paymentMethod === 'pay'
+                      ? 'border-[#1a5c38] bg-green-50 shadow-sm'
+                      : 'border-gray-100 bg-white hover:border-gray-200'
+                  }`}
+                >
+                  <ShieldCheck className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'pay' ? 'text-[#1a5c38]' : 'text-gray-400'}`} />
+                  <p className={`text-sm font-bold ${paymentMethod === 'pay' ? 'text-[#1a5c38]' : 'text-gray-500'}`}>Pay Online</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Card/Other</p>
+                </button>
               </div>
             </div>
 
@@ -228,13 +258,15 @@ const Cart = () => {
               onClick={handleCheckout}
               disabled={checkingOut || cart.length === 0}
               className={`w-full py-4 rounded-2xl font-bold text-lg transition-all disabled:opacity-50 shadow-xl flex items-center justify-center gap-2 ${
-                paymentMethod === 'mpesa'
+                paymentMethod === 'mpesa' || paymentMethod === 'pay'
                   ? 'bg-[#1a5c38] text-white hover:bg-[#2d7a4d] shadow-green-900/20'
+                  : paymentMethod === 'whatsapp'
+                  ? 'bg-[#25D366] text-white hover:bg-[#128C7E] shadow-green-500/20'
                   : 'bg-[#e8a020] text-white hover:bg-[#f4b444] shadow-amber-500/20'
               }`}
             >
-              {paymentMethod === 'mpesa' ? <Smartphone className="w-5 h-5" /> : <Banknote className="w-5 h-5" />}
-              {checkingOut ? 'Processing...' : paymentMethod === 'mpesa' ? 'Pay via M-Pesa' : 'Place Order (Cash on Delivery)'}
+              {paymentMethod === 'mpesa' ? <Smartphone className="w-5 h-5" /> : paymentMethod === 'whatsapp' ? <ShoppingBag className="w-5 h-5" /> : <Banknote className="w-5 h-5" />}
+              {checkingOut ? 'Processing...' : paymentMethod === 'mpesa' ? 'Pay via M-Pesa' : paymentMethod === 'whatsapp' ? 'Confirm on WhatsApp' : paymentMethod === 'pay' ? 'Pay Now' : 'Place Order (Cash on Delivery)'}
             </button>
             
             {!user && cart.length > 0 && (

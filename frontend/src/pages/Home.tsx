@@ -16,7 +16,31 @@ const Home = () => {
   const currentCategory = searchParams.get('category') || '';
 
   useEffect(() => {
-    api.get('/categories').then(res => setCategories(res.data)).catch(() => {});
+    api.get('/categories').then(res => {
+      const cats: string[] = res.data;
+      const prioritized = ['Household', 'Kitchen', 'Home Essentials', 'Home', 'Appliances'];
+      const secondary = ['Farm Equipment', 'Agro', 'Agriculture', 'Farm'];
+      
+      const sorted = [...cats].sort((a, b) => {
+        const aIndex = prioritized.findIndex(p => a.toLowerCase().includes(p.toLowerCase()));
+        const bIndex = prioritized.findIndex(p => b.toLowerCase().includes(p.toLowerCase()));
+        
+        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        const aSecIndex = secondary.findIndex(p => a.toLowerCase().includes(p.toLowerCase()));
+        const bSecIndex = secondary.findIndex(p => b.toLowerCase().includes(p.toLowerCase()));
+        
+        if (aSecIndex !== -1 && bSecIndex !== -1) return aSecIndex - bSecIndex;
+        if (aSecIndex !== -1) return -1;
+        if (bSecIndex !== -1) return 1;
+        
+        return a.localeCompare(b);
+      });
+      
+      setCategories(sorted);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
