@@ -18,6 +18,7 @@ export default function SEO({
       {/* Standard Meta Tags */}
       <title>{title}</title>
       <meta name="description" content={description} />
+      <meta name="theme-color" content="#1a5c38" />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="website" />
