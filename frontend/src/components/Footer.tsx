@@ -9,7 +9,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="inline-block mb-8">
-              <img src="/logo_full.png" alt="Shalina Mart" className="h-24 w-auto object-contain brightness-0 invert" />
+              <img src="/logo_full.png?v=2" alt="Shalina Mart" className="h-24 w-auto object-contain brightness-0 invert" />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed">
               Your one-stop shop for quality products delivered across Kenya. From farm equipment to household essentials.

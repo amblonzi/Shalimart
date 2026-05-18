@@ -34,9 +34,9 @@ const Navbar = () => {
           <div className="flex justify-between h-24 items-center">
             <Link to="/" className="flex items-center hover:scale-105 transition-transform">
               {/* Desktop Logo */}
-              <img src="/logo_full.png" alt="Shalina Mart" className="hidden md:block h-20 w-auto object-contain" />
+              <img src="/logo_full.png?v=2" alt="Shalina Mart" className="hidden md:block h-20 w-auto object-contain" />
               {/* Mobile Logo */}
-              <img src="/logo_initials.png" alt="SM" className="md:hidden h-14 w-auto object-contain" />
+              <img src="/logo_initials.png?v=2" alt="SM" className="md:hidden h-14 w-auto object-contain" />
             </Link>
 
             <div className="hidden md:flex items-center space-x-8">
